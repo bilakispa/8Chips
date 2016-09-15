@@ -8,6 +8,7 @@ const std::string WINDOW_NAME = "8Chips";
 const int CHIP8_SCREEN_WIDTH = 64;
 const int CHIP8_SCREEN_HEIGHT = 32;
 const int WINDOW_RATIO = 10;
+const int FRAMERATE = 60;
 
 //TODO: CHANGE THE POSITION FROM GLOBAL TO LOCAL
 SDL_Window* window = nullptr;
@@ -171,17 +172,15 @@ int main(int argc, char ** argv)
 	SDL_Event ev;
 	const Uint8* keys = SDL_GetKeyboardState(NULL);
 
-	float frame_time = 0;
-	float delta_time = 0;
-	int prev_time = 0;
-	int cur_time = 0;
+	Uint32 dt; //delta time in seconds
+	Uint32 control_timer; //time control
+	Uint32 clock; //last time sample in seconds
+
+	dt = 0;
+	control_timer = 0; //init the control timer
+	clock = SDL_GetTicks();
 
 	while (isRunning) {
-		prev_time = cur_time;
-		cur_time = SDL_GetTicks();
-		delta_time = (cur_time - prev_time) / 1000.0f;
-		frame_time += delta_time;
-
 		//Input Handling
 		while (SDL_PollEvent(&ev)) {
 			if (ev.type == SDL_QUIT) {
@@ -209,9 +208,10 @@ int main(int argc, char ** argv)
 		}
 
 		//Implement better framerate cap
-		if (frame_time >= 1/60) {
-			frame_time = 0;
+		dt = (SDL_GetTicks() - clock); //get the current delta time for this frame
+		clock = SDL_GetTicks(); //updates the clock to check the next delta time
 
+		if (control_timer >= 1000/FRAMERATE) {
 			//Do cpu cycle and show errors if there are
 			chip8.emulateCycle();
 			if (chip8.errorCode != 0)
@@ -223,7 +223,10 @@ int main(int argc, char ** argv)
 
 				SDL_UpdateWindowSurface(window);
 			}
+
+			control_timer = 0;
 		}
+		control_timer += dt;
 	}
 
 	//Close Window, free memory
